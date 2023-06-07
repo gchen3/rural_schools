@@ -1,0 +1,9 @@
+# Analytic and data issues for us to consider
+
+-   Can we get data on course offerings in schools?
+
+    -   AP courses: @CivilRightsData could allow this in a limited way. See @gagnonAdvancedPlacementRural2016a.
+
+    -   NYSED school report card has school-level data on number of students taking AP exams - not the same as offerings, but probably a good proxy (perhaps after some controls).
+
+    -   NY personnel master file has courses taught by each teacher - might be possible to roll these data up to the school or district (and grade) level to get at courses taught in each school. Possible discussion item with Allison Armour-Garb.

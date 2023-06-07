@@ -1,0 +1,16 @@
+---
+title: "NYSED"
+---
+
+This page documents data sources obtained from the New York State Education Department (NYSED).
+
+
+```{r }
+#| label: setup
+#| echo: false
+
+source(here::here("r", "libraries.r"))
+dnysed <- r"(E:\data\nysed\)"
+
+
+```

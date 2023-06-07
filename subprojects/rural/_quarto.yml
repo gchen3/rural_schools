@@ -1,0 +1,60 @@
+project:
+  type: book
+  
+# execute:
+#   include: false
+
+book:
+  title: "Challenges Facing Rural Schools in New York and Potential Solutions"
+  author: "Don Boyd and Gang Chen"
+  date: today
+  date-format: long
+  chapters:
+    - index.qmd
+    - intro.qmd
+    - issues.qmd
+    - organizations.qmd
+    - enrollment.qmd
+    - summary.qmd
+    - bibliography.qmd
+
+bibliography: _bibliography.bib
+nocite: |
+  @*
+
+format:
+  html:
+    theme: cosmo
+  # pdf:
+  #   documentclass: scrreprt
+
+
+# In terminal, in rural folder:
+#    quarto publish netlify --no-prompt --no-browser
+
+
+  # chapters:
+  #   - index.qmd
+  #   - part: "Project notes"
+  #     chapters:
+  #     - intro/goals.qmd
+  #     - intro/schedule.qmd
+  #     - intro/boyd_questions.qmd
+  #     - intro/data_notes.qmd
+  #     - intro/resources.qmd
+  #     - intro/misc_notes.qmd
+  #   - part: "Taxes"
+  #     chapters: 
+  #     - taxes/current_taxes.qmd
+  #     - taxes/payroll_mobility_tax.qmd
+  #     - taxes/petroleum_business_tax.qmd
+  #     - taxes/mortgage_recording_tax.qmd
+  #   - part: "MTOA and MMTOA questions"
+  #     chapters: 
+  #     - mtoa/mtoa.qmd
+  #   - part: "Payroll mobility tax-base questions"
+  #     chapters:
+  #     - pmtbase/payroll_mobility_tax_base.qmd
+  #   - bibliography.qmd
+
+

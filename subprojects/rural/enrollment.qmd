@@ -1,0 +1,178 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+# Rural schools have declining enrollment and small class sizes
+
+```{r libraries}
+#| echo: false
+#| warning: false
+#| output: false
+
+source(here::here("r", "libraries.r"))
+
+```
+
+
+```{r locations}
+#| echo: false
+#| warning: false
+#| output: false
+
+dpad <- r"(E:\data\cornell_pad\)"
+dschools <- path(dpad, "schools")
+dnysed <- r"(E:\data\nyschools\)"
+
+```
+
+
+```{r getdata}
+#| echo: false
+#| warning: false
+#| output: false
+
+df <- readRDS(here::here("data", "enroll_marked.rds"))
+
+```
+
+
+```{r data_prep}
+#| echo: false
+#| warning: false
+#| output: false
+
+df2 <-df |> 
+  filter(!is.na(locale)) |> # remove nonmatches
+  arrange(year, districtid) |> 
+  group_by(year, districtid) |> 
+  mutate(count=n()) |> 
+  ungroup()
+# count(df2, count) # good - no dups
+
+df3 <- df2 |> 
+  mutate(locale=as.integer(locale),
+        locgrp=case_when(locale %in% 11:13 ~ "city",
+                 locale %in% 21:23 ~ "suburban",
+                 locale %in% 31:33 ~ "town",
+                 locale %in% 41:43 ~ "rural",
+                 TRUE ~ "error"))
+# count(df3, locgrp, locale, localef)
+count(df3 |> filter(year==max(year)), locgrp, locale, localef)
+
+```
+
+
+## Rural enrollment has been declining rapidly
+
+Sources: NYSED enrollment data obtained via Cornell PAD. Rural/suburban/town designations from NCES. (Details to come.)
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| notes: false
+#| output: true
+
+options(dplyr.summarise.inform = FALSE)
+p <- df3 |>
+  filter(locgrp != "city") |> 
+  group_by(year, locgrp) |>
+  summarise(value=median(total)) |> 
+  ggplot(aes(year, value / value[year==1995], colour=locgrp)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 1) +
+  scale_y_continuous(name="% of 1995 enrollment", labels=scales::percent_format(accuracy = 1)) +
+  scale_x_continuous(name="Year in which school year begins", breaks=seq(1990, 2025, 5)) +
+  ggtitle("Median enrollment in NY rural, suburban and town school districts",
+          subtitle="Enrollment indexed to 1995=100") +
+  theme_bw() +
+  legend_notitle
+ggsave(here::here("results", "enroll_indexed.png"), p, width=8, height=6)
+options(dplyr.summarise.inform = TRUE)
+
+```
+
+
+```{r}
+count(df3, locgrp)
+tmp <- df3 |>
+  filter(locgrp == "rural") |> 
+  select(year, cnty, districtid, leaid, legalname, year, localef, locgrp, total) |> 
+  filter(year %in% c(1995, 2021)) |> 
+  pivot_wider(names_from = year, values_from = total) |> 
+  mutate(change=`2021` - `1995`)
+
+tmp |> 
+  mutate(type=case_when(is.na(change) ~ "NA",
+                        change < 0 ~ "decline",
+                        change > 0 ~ "increase",
+                        change == 0 ~ "zero",
+                        TRUE ~ "ERROR"
+                        )) |> 
+  count(type)
+
+```
+
+
+## Rural school districts have smaller enrollment than other districts
+
+Median enrollment is now less than 750 students - slightly more than half of town school districts, and about a quarter of suburban school districts.
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| notes: false
+#| output: true
+
+options(dplyr.summarise.inform = FALSE)
+df3 |>
+  filter(locgrp != "city") |> 
+  group_by(year, locgrp) |>
+  summarise(value=median(total)) |> 
+  ggplot(aes(year, value, colour=locgrp)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(name="Fall enrollment", labels=scales::number_format(accuracy = 1), 
+                     limits=c(0, NA), breaks=seq(0, 5000, 250)) +
+  scale_x_continuous(name="School year beginning in...", breaks=seq(1990, 2025, 5)) +
+  ggtitle("Median enrollment in NY rural, suburban and town school districts") +
+  theme_bw()
+options(dplyr.summarise.inform = TRUE)
+
+```
+
+## District-wide enrollment in 12th grade
+
+Median 12th grade enrollment in NY rural school districts is about 50 students - about half of town districts and a fifth of suburban districts. It is down about a third from its level in 2007.
+
+This makes it more difficult to run courses that might be of interest to a relatively small number of students, such as AP courses, less-popular foreign languages, and some vocational courses.
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| notes: false
+#| output: true
+
+options(dplyr.summarise.inform = FALSE)
+df3 |>
+  filter(locgrp != "city") |> 
+  group_by(year, locgrp) |>
+  summarise(value=median(g12)) |> 
+  ggplot(aes(year, value, colour=locgrp)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(name="Fall enrollment", labels=scales::number_format(accuracy = 1), 
+                     limits=c(0, NA), breaks=seq(0, 300, 25)) +
+  scale_x_continuous(name="School year beginning in...", breaks=seq(1990, 2025, 5)) +
+  ggtitle("Median 12th grade enrollment in NY rural, suburban and town school districts") +
+  theme_bw()
+options(dplyr.summarise.inform = TRUE)
+```
+
+

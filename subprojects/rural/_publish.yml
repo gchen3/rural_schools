@@ -1,0 +1,4 @@
+- source: project
+  netlify:
+    - id: a7fb7e2d-0f5a-41b6-87a5-8bfefe3a1a78
+      url: 'https://ruralschools.netlify.app'

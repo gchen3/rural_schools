@@ -1,0 +1,51 @@
+project:
+  type: book
+  output-dir: _data_prep
+
+# quarto publish netlify --no-render
+# quarto publish netlify --no-browser --no-prompt
+# quarto publish netlify --no-render --no-browser --no-prompt
+
+# https://quarto.org/docs/computations/execution-options.html    
+# for cell options: https://quarto.org/docs/reference/cells/cells-knitr.html
+
+execute:
+  eval: true
+  echo: false
+  error: false
+  warning: false
+  message: false  # not sure if allowed
+  note: false  # not sure if allowed
+  freeze: auto  # during global project renders, re-render only when source changes
+  
+editor_options:
+  chunk_output_type: console
+
+format:
+  html:
+    theme: cosmo
+    # css: style.css  # for div datatables wrapper
+    fig-width: 8
+    fig-height: 8
+    # self-contained: false
+  # pdf:
+  #   documentclass: scrreprt
+
+book:
+  title: "Rural schools data preparation"
+  author: "Don Boyd"
+  date: today
+  date-format: long
+  chapters:
+    - index.qmd
+    # - clean_tax_data.qmd
+    # - todo.qmd
+    # - part: "Baseline"
+    #   chapters:
+    #   - intro/goals.qmd
+    #   - intro/boyd_questions.qmd
+
+# bibliography: _baseline.bib
+# nocite: |
+#   @*
+
