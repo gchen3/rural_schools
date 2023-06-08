@@ -1,36 +1,3 @@
----
-title: "Cambridge Central Schools"
-author: "Don Boyd"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
-execute:
-  cache: true
-  eval: true
-  echo: false
-  output: false
-  warning: false
-format:
-  html:
-    toc: true
-    toc-depth: 2
-    number-sections: true
-    df_print: paged
----
-
-## Quarto
-
-<!-- New opts: -->
-
-<!-- format: html -->
-
-<!-- editor: visual -->
-
-<!-- editor_options: -->
-
-<!--   chunk_output_type: inline -->
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
 
 When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
 

@@ -9,6 +9,12 @@ project:
 # https://quarto.org/docs/computations/execution-options.html    
 # for cell options: https://quarto.org/docs/reference/cells/cells-knitr.html
 
+# ---
+# output: html_document
+# editor_options: 
+#   chunk_output_type: console
+# ---
+
 execute:
   eval: true
   echo: false

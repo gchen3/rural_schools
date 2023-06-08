@@ -1,16 +1,208 @@
 ---
-title: "NYSED"
+output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
+
+# NYSED data
 
 This page documents data sources obtained from the New York State Education Department (NYSED).
 
 
 ```{r }
 #| label: setup
+#| eval: true
+#| include: false
 #| echo: false
 
 source(here::here("r", "libraries.r"))
 dnysed <- r"(E:\data\nysed\)"
 
+```
+
+
+<!-- TODO:  -->
+<!-- -   graduation rate percentiles -->
+
+```{r}
+
+# Links:
+# https://www.p12.nysed.gov/irs/schoolDirectory/
+# https://www.oms.nysed.gov//sedref/home.html
+# https://eservices.nysed.gov/sedreports/list?id=1
+# https://cognos.nysed.gov/ibmcognos/bi/v1/disp?b_action=cognosViewer&ui.tool=CognosViewer&ui.action=run&ui.object=storeID(%27iE2F9F18D05114622ABE308D0AA265CE9%27)&cv.header=false&cv.toolbar=false&run.outputFormat=HTML
+# https://data.nysed.gov/downloads.php
+# https://www.p12.nysed.gov/irs/statistics/enroll-n-staff/home.html
+# https://www.oms.nysed.gov//sedref/documents/GRADE-Organization-DESC.pdf
+# https://www.p12.nysed.gov/irs/pmf/
+# https://www.p12.nysed.gov/irs/pmf/PersonnelMasterFileStatisticalRuns2019-20.xlsx  has needs-resource codes
+# https://data.ny.gov/browse?q=state%20education%20department&sortBy=relevance
+# https://data.ny.gov/Government-Finance/New-York-State-School-Aid-Beginning-School-Year-19/9pb8-dg53  
 
 ```
+
+
+```{r}
+#| label: get-ids
+#| eval: false
+#| include: false
+
+# id crosswalk ------------------------------------------------------------
+
+# you can get many kinds of linkage files from the landing page
+# https://eservices.nysed.gov/sedreports/list?id=1  landing page
+
+# go to the landing page and get csv version for [School Districts, Public & Charter Schools: NCES IDs]
+# at time of download on June 8 2023 link was:
+# https://eservices.nysed.gov/sedreports/view?rpt=%2Fcontent%2Ffolder%5B%40name%3D%27NYSED+Reports%27%5D%2Ffolder%5B%40name%3D%27SEDREF%27%5D%2Ffolder%5B%40name%3D%27SEDREF+Reports+for+Public+Website%27%5D%2Freport%5B%40name%3D%27School+Districts%2C+Public+%26+Charter+Schools%3A+NCES+IDs%27%5D&format=CSV&reportId=iE0680D8ED23E4088B5F288AEE1B63E23
+
+fn <- "School Districts, Public & Charter Schools_ NCES IDs.csv"
+
+# get district ids --------------------------------------------------------
+
+# we need to set locale encoding to read this file
+
+# character info (from Emeditor)
+# 8
+# U+0038
+# UTF-16LE: 0x0038
+# DIGIT EIGHT
+# Unicode Script: Zyyy (Common)
+# Unicode General Category: Nd (Decimal Number)
+# File position: 1,896 bytes
+
+# it now is csv, used to require the old reading code below
+ids1 <- vroom(path(dnysed, fn),
+             col_types = cols(.default = col_character()),
+             # col_names = FALSE, # the col_names are not valid and must be fixed
+             locale=locale(encoding="UTF-16LE")) # this is essential
+
+# # old code
+# ids1 <- vroom(path(dnysed, fn),
+#              col_types = cols(.default = col_character()),
+#              col_names = FALSE, # the col_names are not valid and must be fixed
+#              locale=locale(encoding="UTF-16LE"), # this is essential
+#              delim="\t", trim_ws = TRUE)
+
+names(ids1)
+(vnames <- str_replace_all(names(ids1), " ", "_"))
+# [1] "Institution_ID"            "Legal_Name"                "Popular_Name"              "SED_Code"                 
+# [5] "SchDistofLoc_Code"         "SchDistofLoc_Description"  "County_Code"               "County_Description"       
+# [9] "INST_Type_Code"            "INST_Type_Description"     "INST_Sub_Type_Code"        "INST_Sub_Type_Description"
+# [13] "Active_Date"               "Inactive_Date"             "EDEN_NCES_LEA_ID"          "EDEN_LEA_Type_CODE"       
+# [17] "EDEN_LEA_OP_Status_Code"   "EDEN_NCES_SCH_ID"          "EDEN_Sch_Type_Code"        "EDEN_Sch_OP_Status_Code"  
+
+ids2 <- ids1 |> 
+  setNames(vnames)
+glimpse(ids2)
+
+# invesigate types of institutions
+count(ids2, INST_Type_Code, INST_Type_Description)
+#   INST_Type_Code INST_Type_Description     n
+#   <chr>          <chr>                 <int>
+# 1 10             GOVERNMENT AGENCIES      53
+# 2 16             SCHOOL DISTRICTS        734
+# 3 17             PUBLIC SCHOOLS         5289
+# 4 18             BOCES                    38
+# 5 21             CHILD NUTRITION           7
+
+# subtypes -- 33 subtypes, most not of interest
+count(ids2, INST_Type_Code, INST_Type_Description, INST_Sub_Type_Code, INST_Sub_Type_Description)
+
+# drill down into school district type -- 10 subtypes
+count(ids2 |> filter(INST_Type_Code=="16"), INST_Type_Code, INST_Type_Description, INST_Sub_Type_Code, INST_Sub_Type_Description)
+#    INST_Type_Code INST_Type_Description INST_Sub_Type_Code INST_Sub_Type_Description     n
+#    <chr>          <chr>                 <chr>              <chr>                     <int>
+#  1 16             SCHOOL DISTRICTS      1                  CITY                         89
+#  2 16             SCHOOL DISTRICTS      10                 100% CONTRACT                 3
+#  3 16             SCHOOL DISTRICTS      2                  UNION FREE                   62
+#  4 16             SCHOOL DISTRICTS      3                  INDEPENDENT UNION FREE       86
+#  5 16             SCHOOL DISTRICTS      4                  CENTRAL                     268
+#  6 16             SCHOOL DISTRICTS      5                  COMMON                        8
+#  7 16             SCHOOL DISTRICTS      6                  CITY CENTRAL                  7
+#  8 16             SCHOOL DISTRICTS      7                  INDEPENDENT CENTRAL         195
+#  9 16             SCHOOL DISTRICTS      8                  SPECIAL ACT                  13
+# 10 16             SCHOOL DISTRICTS      9                  CENTRAL HIGH SCHOOL           3
+
+# convert all-numeric codes to integers (i.e., type and subtype) for more-convenient sorting
+ids3 <- ids2 |> 
+  mutate(across(c(INST_Type_Code, INST_Sub_Type_Code), as.integer))
+
+# focus on school districts
+sdids1 <- ids3 |> 
+  filter(INST_Type_Code==16) |> 
+  mutate(across(c(Active_Date, Inactive_Date), as.Date))
+
+summary(sdids1)
+
+# check for duplicates
+skim(sdids1) 
+sdids1 |> 
+  mutate(n=n(), .by=SchDistofLoc_Code) |> 
+  filter(n>1)  # double check -- no duplicates
+
+# which codes can we drop?
+count(sdids1, EDEN_LEA_Type_CODE) # keep
+count(sdids1, EDEN_LEA_OP_Status_Code) # keep
+count(sdids1, EDEN_NCES_SCH_ID) # all NA, drop
+count(sdids1, EDEN_Sch_Type_Code)  # all NA, drop
+count(sdids1, EDEN_Sch_OP_Status_Code)  # all NA, drop
+count(sdids1, INST_Type_Description) # all "SCHOOL DISTRICTS", drop
+
+sdids2 <- sdids1 |> 
+  select(instid=Institution_ID, bedscode=SchDistofLoc_Code, sedcode=SED_Code, 
+         legalname=Legal_Name, popname=Popular_Name,
+         subtype=INST_Sub_Type_Code, subtypedesc=INST_Sub_Type_Description,
+         cntycode=County_Code,
+         cntyname=County_Description,
+         ncesid=EDEN_NCES_LEA_ID, ncestype=EDEN_LEA_Type_CODE, ncesopstat=EDEN_LEA_OP_Status_Code,
+         activedate=Active_Date,
+         inactivedate=Inactive_Date
+         ) 
+
+glimpse(sdids2)
+
+saveRDS(sdids2, here::here("data", "sedcodes_xwalk.rds"))
+
+```
+
+
+## Advanced Placement (AP) and International Baccalaureate (IB) course participation and assessment data 
+
+The data appear (??) to be limited to 2018-19 through 2020-21
+
+https://data.nysed.gov/APIB.php?year=2020
+
+Glossary: https://data.nysed.gov/glossary.php?report=apib
+
+Business rules: https://data.nysed.gov/businessrules.php?type=apib
+
+This report provides information to the public of Advanced Placement (AP) and International Baccalaureate (IB) course participation and assessment data reported to the New York State Education Department by school districts and charter schools. This data are an important part of the Board of Regents’ effort to create and transparently report on the educational equity for all students. The data are used as part of the calculation of an institution’s College, Career, and Civic Readiness. The data are aggregated by grade level and can be filtered by student subgroups.
+
+Data is reported by education institutions to the State Education Department throughout the school year and are available for verification by districts via the Level 2 Reporting environment (L2RPT) until the close of the state data warehouse in August. Although the report does not need to be certified, the Department strongly encourages the data to be reviewed by the district for accuracy as the underlying data used to create this report are included in other L2RPTs that are required to be certified. For the most updated information, please contact the school district.
+
+
+
+```{r}
+#| label: AP-sources
+#| eval: false
+#| include: false
+
+# AP and similar course data ----
+# https://data.nysed.gov/APIB.php?year=2019&state=yes
+# https://data.nysed.gov/downloads.php
+# https://data.nysed.gov/files/apib/2021/APIB21.zip  AP_IB_Course_Summary_2021
+# https://data.nysed.gov/files/apib/1920/APIB20.zip
+# https://data.nysed.gov/files/apib/1819/APIB19.zip
+# does not appear to be available for earlier years
+
+url <- "https://data.nysed.gov/files/apib/2021/APIB21.zip"
+url <- "https://data.nysed.gov/files/apib/1920/APIB20.zip"
+fpath <- path(dnysed, "apib", path_file(url))
+download.file(url, fpath, mode="wb")
+
+
+```
+
+
+
