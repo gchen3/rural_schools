@@ -1,0 +1,441 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Cornell data
+
+This page documents data sources obtained from Cornell's Program on Applied Demographics (PAD) program.
+
+
+New York State Center for Rural Schools https://www.nyruralschools.org/ Data https://www.nyeducationdata.org/
+
+I read all data as character to make it easier to look for bad data before converting to numeric.
+
+
+```{r }
+#| label: setup
+#| eval: true
+#| include: false
+#| echo: false
+
+source(here::here("r", "libraries.r"))
+dpad <- r"(E:\data\cornell_pad\)"
+dschools <- path(dpad, "schools")
+
+```
+
+## Download files
+
+https://pad.human.cornell.edu/schools/datadownload.cfm
+
+Download the following files:
+
+
+
+```{r}
+#| label: files-and-locations
+#| eval: true
+#| include: true
+#| echo: false
+#| df-print: tibble
+
+
+# last download: 6/12/2023  7/20/2022
+# on left is the name Cornell associates with a file, on right is its url
+
+fnames <- read_csv("fname, url
+basicinfo.csv,            https://pad.human.cornell.edu/schools/BasicInfo_csv.cfm
+demographics_all.csv,     https://pad.human.cornell.edu/schools/demogr_csv.cfm
+enrollments_all.csv,      https://pad.human.cornell.edu/schools/enr_csv.cfm
+graduation_all.csv,       https://pad.human.cornell.edu/schools/grad_csv.cfm
+regents_all.csv,          https://pad.human.cornell.edu/schools/regents_csv.cfm
+apm_all.csv,              https://pad.human.cornell.edu/schools/apm_csv.cfm
+faru_all.csv,             https://pad.human.cornell.edu/schools/FARU_csv.cfm
+subgroups.csv,            https://pad.human.cornell.edu/schools/download/Subgroups.csv
+elamath_all.csv,          https://pad.human.cornell.edu/schools/ELAMATH_csv.cfm
+")
+
+options(width=120)
+print(fnames |> arrange(fname))
+options(width=80) # default
+
+```
+
+
+```{r}
+#| label: ONETIME-downloads
+#| eval: false
+#| include: false
+#| echo: false
+
+# download files ----------------------------------------------------------
+
+# https://pad.human.cornell.edu/schools/datadownload.cfm 
+
+# Please note that Year in the data files refers to the beginning year of the
+# school year. E.g. 2010 refers to 2010/2011 school year.
+
+
+# note that:
+#   I put ELAMATH last because it might timeout -- change the timeout option as shown below
+#   subgroups.csv does not have a .cfm link
+#   some of the files can take a long time, especially graduation_all.csv and regents_all.csv
+
+# https://pad.human.cornell.edu/schools/BasicInfo_csv.cfm
+
+# download some or all files
+tout <- getOption("timeout")
+options(timeout=180)
+for(fnum in 1:nrow(fnames)){
+# for(fnum in 8){
+  fname <- fnames$fname[fnum] |> str_to_lower()
+  url <- fnames$url[fnum]
+  print(fname)
+  download.file(url, path(dschools, fname), mode="wb")
+}
+options(timeout=tout)
+
+
+```
+
+
+## basic info
+
+This file has district id, name, BOCES code, grades served, and needs index for 2016-17.
+
+```{r}
+#| label: basic-info
+#| eval: false
+#| include: false
+#| echo: false
+
+basic1 <- vroom(path(dschools, "basicinfo.csv"),
+               col_types = cols(.default = col_character()))
+glimpse(basic1)
+count(basic1, YEAR) # all data are from 2016-17
+skim(basic1)
+# GEOID and DSB have some missing values
+
+basic2 <- basic1 |>
+  lcnames() |>
+  rename(distid=districtid,
+         dname=district_name, 
+         grades=grade_range, 
+         ineeds=needs_index, 
+         boces=boces_cd) |>
+  mutate(ineeds=as.integer(ineeds)) |>
+  select(distid, dsb, geoid, dname, boces, grades, ineeds)
+glimpse(basic2)
+count(basic2, ineeds) # 1-6
+
+
+# do we need dsb AND distid?
+basic2 |> filter(distid != dsb) # none
+basic2 |> filter(is.na(distid)) # none
+basic2 |> filter(is.na(dsb)) # about 8
+# no, we can drop dsb
+
+basic <- basic2 |>
+  # make nicer district names
+  mutate(dname=str_to_title(dname),
+         dname=str_replace(dname,  " Csd", " CSD"),
+         dname=str_replace(dname,  " Sd", " SD"),
+         dname=str_replace(dname,  "Ufsd", "UFSD"), # note no space so replace anywhere
+         dname=str_replace(dname,  "Nyc", "NYC")
+  ) |> 
+  select(-dsb)
+unique(basic$dname) |> sort()
+glimpse(basic)
+saveRDS(basic, here::here("data", "basic.rds"))
+
+summary(basic)
+skim(basic)
+
+```
+
+```{r}
+#| label: basic-show
+#| eval: true
+#| include: true
+
+# note that the following option will use more of the page:
+#   #| column: page
+
+basic <- readRDS(here::here("data", "basic.rds"))
+glimpse(basic)
+
+options(width = 120) 
+print(skim(basic))
+options(width=80) # default
+
+
+```
+
+## demographics
+
+Cornell's source:
+
+-   Cornell (Jan Vink) obtains the data from [nysed](https://www.p12.nysed.gov/irs/statistics/enroll-n-staff/ArchiveEnrollmentData.html).
+
+-   Note that some of the web data are slightly updated vs Jan's data
+
+```{r}
+#| label: demographics
+#| eval: false
+#| include: false
+#| echo: false
+
+demographics1 <- vroom(path(dschools, "Demographics_all.csv"),
+                 col_types = cols(.default = col_character()))
+glimpse(demographics1)
+
+demographics2 <- demographics1 |>
+  lcnames() |> 
+  rename(distid=district) |>
+  mutate(year=as.integer(year),
+         across(-c(distid, year), as.numeric))
+glimpse(demographics2)
+print(skim(demographics2))
+
+demographics2 |> 
+  filter(year==2019, distid=="010100")
+
+saveRDS(demographics2, here::here("data", "demographics_wide.rds"))
+
+# subgroups, labels; vname
+# 01  All Students; ? not included in this data, but in enrollment instead
+# 02	Female; female
+# 03	Male; male
+
+# 04	American Indian/Alaska Native; amind
+# 05	Black; black
+# 06	Hispanic; hisp
+# 07	Asian/Pacific Islander; asian
+# 08	White; white
+# 09	Multiracial; multi
+
+# 10	General Education Students; ?? by subtraction?
+# 11	Students with Disabilities; swd
+
+# 12	Not English Language Learner; ?? by subtraction ?
+# 13	English Language Learner; ell
+
+# 15	Economically Disadvantaged; ecdis
+# 16	Not Economically Disadvantaged; ???? - by subtraction?
+
+# not found: lep, freelunch, reducedlunch
+# lep: Limited English Proficient subgroup 12
+
+# saveRDS(demographics, here::here("data", "demographics.rds"))
+```
+
+
+```{r}
+#| label: demographics-show
+#| eval: true
+#| include: true
+
+
+demo <- readRDS(here::here("data", "demographics_wide.rds"))
+glimpse(demo)
+
+options(width = 120) 
+print(skim(demo))
+options(width=80) # default
+
+```
+
+
+## enrollment
+
+Enrollment by district by grade by year, in wide format:
+
+-   Cornell (Jan Vink) obtains the data from two nysed web pages: [this](https://www.p12.nysed.gov/irs/statistics/enroll-n-staff/ArchiveEnrollmentData.html), and [this](https://www.p12.nysed.gov/irs/statistics/enroll-n-staff/home.html) -- the latter is the main page.
+
+-   Note that some of the web data are slightly updated vs Jan's data
+
+-   Cornell only has some subsets of the data, not the crosses (e.g., not white-female)
+
+
+```{r}
+#| label: enrollment
+#| eval: false
+#| include: false
+#| echo: false
+
+enroll1 <- vroom(path(dschools, "enrollments_all.csv"),
+              col_types = cols(.default = col_character()))
+glimpse(enroll1)
+
+enroll2 <- enroll1 |>
+  lcnames() |> 
+  rename(distid=distrid) |>
+  mutate(year=as.integer(year),
+         across(-c(distid, year), as.numeric))
+glimpse(enroll2)
+
+#.. enrollment wide ----
+saveRDS(enroll2, here::here("data", "enrollwide.rds"))
+
+#.. enrollment long ----
+# enroll <- enroll2 |>
+#   pivot_longer(cols=-c(distid, year))
+# ht(enroll)
+# saveRDS(enroll, here::here("data", "enroll.rds"))
+
+
+```
+
+```{r}
+#| label: enrollment-show
+#| eval: true
+#| include: true
+
+enrollwide <- readRDS(here::here("data", "enrollwide.rds"))
+glimpse(enrollwide)
+
+options(width = 120) 
+print(skim(enrollwide))
+options(width=80) # default
+
+```
+
+
+## ELA and Math
+
+CAUTIONS:
+
+-   The variable that NYSED calls `TOTAL_SCORE` has many negative values.
+
+-   It looks like missing values for levels are coded as -1.
+
+
+I convert:
+
+-   Negative levels, total score, and average scores to missing
+
+
+```{r}
+
+elamath1 <- vroom(path(dschools, "elamath_all.csv"),
+                  col_types = cols(.default = col_character()))
+glimpse(elamath1)
+count(elamath1, SUBJECT)
+count(elamath1, SUBGROUP)
+count(elamath1, GRADE)
+count(elamath1, YEAR)
+
+elamath2 <- elamath1 |>
+  lcnames() |> 
+  rename(distid=beds_cd, 
+         numtested=num_tested, 
+         totscore=total_score) |>
+  mutate(distid=str_pad(distid, width=6, side="left", pad="0"),
+         across(c(year, subgroup, grade, numtested), as.integer),
+         across(c(starts_with("level"), totscore, avgscore), as.numeric)) |>
+  select(distid, year, subject, grade, subgroup, everything())
+summary(elamath2) # looks like -1 should be set to NA
+quantile(elamath2$totscore)
+elamath2 |> filter(totscore < 0) # totscore looks suspicious
+
+elamath3 <- elamath2 |>
+  mutate(across(c(starts_with("level"), avgscore), ~ ifelse(.x==-1, NA_real_, .x)),
+         level12=naz(level1) + naz(level2),
+         level34=naz(level3) + naz(level4),
+         totscore=ifelse(totscore < 0, NA_real_, totscore),
+         avgscore=ifelse(avgscore < 0, NA_real_, avgscore))
+summary(elamath3)
+
+# elamath <- elamath3 |>
+#   pivot_longer(cols=c(numtested,
+#                       starts_with("level"),
+#                       totscore, avgscore))
+
+saveRDS(elamath3, here::here("data", "elamath_wide.rds"))
+
+
+```
+
+
+
+## faru (finance) data
+
+FARU is the Fiscal Analysis and Research Unit in NYSED.
+
+```{r}
+#| label: finance
+#| eval: false
+#| include: false
+#| echo: false
+
+finance1 <- vroom(path(dschools, "faru_all.csv"),
+                       col_types = cols(.default = col_character()))
+glimpse(finance1)
+
+finance2 <- finance1 |>
+  lcnames() |> 
+  rename(distid=district) |>
+  mutate(year=as.integer(year),
+         across(-c(distid, year), as.numeric))
+glimpse(finance2)
+names(finance2)
+
+#.... finance wide Cornell ----
+saveRDS(finance2, here::here("data", "finwide.rds"))
+
+```
+
+
+```{r}
+#| label: finance-show
+#| eval: true
+#| include: true
+
+finwide <- readRDS(here::here("data", "finwide.rds"))
+glimpse(finwide)
+
+options(width = 120) 
+print(skim(finwide))
+options(width=80) # default
+
+```
+
+## graduation rates
+
+http://www.nysed.gov/news/2022/state-education-department-releases-2017-cohort-high-school-graduation-rates 2017 cohort, those students who first entered 9th grade in New York's public schools in 2017 this means: cohortye is the year a student first entered 9th grade in NY public schools
+
+
+## subgroups
+
+```{r}
+#| label: subgroups
+#| eval: false
+#| include: false
+#| echo: false
+
+subgroups <- vroom(path(dschools, "subgroups.csv")) |>
+  lcnames() |> 
+  mutate(subgroup=as.integer(subgroup))
+subgroups
+saveRDS(subgroups, here::here("data", "subgroups.rds"))
+
+```
+
+```{r}
+#| label: subgroups-show
+#| eval: true
+#| include: true
+
+subgroups <- readRDS(here::here("data", "subgroups.rds"))
+glimpse(subgroups)
+
+options(width = 120) 
+print(skim(subgroups))
+options(width=80) # default
+
+count(subgroups, subgroup, description)
+
+```
+

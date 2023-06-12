@@ -2,19 +2,6 @@ project:
   type: book
   output-dir: _data_prep
 
-# quarto publish netlify --no-render
-# quarto publish netlify --no-browser --no-prompt
-# quarto publish netlify --no-render --no-browser --no-prompt
-
-# https://quarto.org/docs/computations/execution-options.html    
-# for cell options: https://quarto.org/docs/reference/cells/cells-knitr.html
-
-# ---
-# output: html_document
-# editor_options: 
-#   chunk_output_type: console
-# ---
-
 execute:
   eval: true
   echo: false
@@ -44,8 +31,8 @@ book:
   date-format: long
   chapters:
     - index.qmd
-    # - clean_tax_data.qmd
-    # - todo.qmd
+    - data_nysed.qmd
+    - data_cornell.qmd
     # - part: "Baseline"
     #   chapters:
     #   - intro/goals.qmd
@@ -54,4 +41,17 @@ book:
 # bibliography: _baseline.bib
 # nocite: |
 #   @*
+
+# quarto publish netlify --no-render
+# quarto publish netlify --no-browser --no-prompt
+# quarto publish netlify --no-render --no-browser --no-prompt
+
+# https://quarto.org/docs/computations/execution-options.html    
+# for cell options: https://quarto.org/docs/reference/cells/cells-knitr.html
+
+# ---
+# output: html_document
+# editor_options: 
+#   chunk_output_type: console
+# ---
 

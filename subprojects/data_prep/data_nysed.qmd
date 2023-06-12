@@ -21,12 +21,36 @@ dnysed <- r"(E:\data\nysed\)"
 ```
 
 
+## NYSED news
+
+https://www.nysed.gov/news/2023
+
+Feb 2 2023 The State Education Department today released graduation data for 2018 Cohort students, who are those students that graduated by August 2022. https://www.nysed.gov/news/2023/2018-cohort-graduation-rates-data
+
+Oct 24 2022 https://www.nysed.gov/news/2022/state-education-department-releases-2021-22-final-state-assessment-results  final 2021-22 state assessment data -- months earlier than in previou8s years
+
+https://www.nysed.gov/news/2023/us-department-education-approves-state-plan-restart-school-accountability-system U.S. Department of Education Approves State Plan to Restart School Accountability System
+
+
 <!-- TODO:  -->
 <!-- -   graduation rate percentiles -->
 
 ```{r}
+#| label: info
+#| eval: false
+#| include: false
 
 # Links:
+
+# https://www.oms.nysed.gov/sedref/home.html  sedref info
+# https://portal.nysed.gov/pls/sedrefpublic/SED.sed_inst_qry_vw$.startup lookup institutions
+
+# https://www.oms.nysed.gov/sedref/home.html links to various codes - e.g., grade organization
+
+# https://www.p12.nysed.gov/irs/data_reporting.html
+
+# https://eservices.nysed.gov/sedreports/list?id=2 child nutrition 
+
 # https://www.p12.nysed.gov/irs/schoolDirectory/
 # https://www.oms.nysed.gov//sedref/home.html
 # https://eservices.nysed.gov/sedreports/list?id=1
@@ -41,6 +65,7 @@ dnysed <- r"(E:\data\nysed\)"
 
 ```
 
+## District and school identification codes
 
 ```{r}
 #| label: get-ids
@@ -167,6 +192,119 @@ saveRDS(sdids2, here::here("data", "sedcodes_xwalk.rds"))
 ```
 
 
+## Fiscal data
+
+https://oms32.nysed.gov/faru/Profiles/2020-21_FiscalProfiles.html
+https://stateaid.nysed.gov/st3/
+https://stateaid.nysed.gov/st3/st3data.htm
+https://www.oms.nysed.gov/faru/Analysis/cover.html
+
+### ST-3 data
+
+```{r}
+#| label: get-st3raw
+#| eval: false
+#| include: false
+
+rawpath <- path(dnysed, "st3", "raw")
+
+(files <- c(dir_ls(rawpath, glob=c("*.txt")), dir_ls(rawpath, glob=c("*.TXT"))))
+
+df1 <- vroom(files, 
+            col_names = c("distid", "mainframe1", "mainframe2", "value"), 
+            col_types="cccc",
+            id="fname")
+dim(df1)
+df1[1:5, ]
+glimpse(df1)
+count(df1, fname)
+ht(df1)
+skim(df1)
+
+df2 <- df1 |> 
+  mutate(fname=path_file(fname),
+         fye=case_when(str_sub(fname, 1, 3)=="Raw" ~ 
+                         str_sub(fname, 10, 13),
+                       str_sub(fname, 1, 3) %in% c("ST3", "st3") ~
+                         str_sub(fname, 5, 8),
+                       TRUE ~ "ERROR"))
+count(df2, fye, fname)
+
+df3 <- df2 |> 
+  mutate(fye=as.integer(fye)) |> 
+  select(fye, distid, mainframe1, mainframe2, value) |> 
+  arrange(fye, distid, mainframe1, mainframe2)
+glimpse(df3)
+
+saveRDS(df3, here::here("data", "st3raw.rds"))
+
+
+```
+
+```{r}
+#| label: cleanst3
+#| eval: false
+#| include: false
+
+df1 <- readRDS(here::here("data", "st3raw.rds"))
+ht(df1)
+
+check <- df1 |> filter(is.na(value))
+count(check, fye, sort=TRUE)
+count(check, distid, sort=TRUE)
+count(check, mainframe1, sort=TRUE)
+count(check, mainframe2, sort=TRUE)
+
+df1 |> 
+  filter(fye==2021, distid=="010100") |> 
+  write_csv(here::here("scratch", "st3albany2021.csv"))
+
+
+```
+
+
+## School report card data
+
+As of now, we only get school report card data for 2021 and 2022, as the Cornell data are available for earlier years.
+
+```{r}
+#| label: report-card-sources
+#| eval: false
+#| include: false
+
+# https://data.nysed.gov/downloads.php landing page
+
+
+
+
+# Report card data selected years ----
+# https://data.nysed.gov/files/essa/21-22/SRC2022.zip
+
+# https://data.nysed.gov/files/apib/2021/APIB21.zip  AP_IB_Course_Summary_2021
+# https://data.nysed.gov/files/apib/1920/APIB20.zip
+# https://data.nysed.gov/files/apib/1819/APIB19.zip
+# does not appear to be available for earlier years
+
+# glossary https://data.nysed.gov/glossary.php?report=apib
+# business rules https://data.nysed.gov/businessrules.php?type=apib
+
+# url <- "https://data.nysed.gov/files/apib/1718/APIB18.zip" # does not exist
+url <- "https://data.nysed.gov/files/apib/1819/APIB19.zip"
+url <- "https://data.nysed.gov/files/apib/1920/APIB20.zip"
+url <- "https://data.nysed.gov/files/apib/2021/APIB21.zip"
+
+fpath <- path(dnysed, "apib", path_file(url))
+download.file(url, fpath, mode="wb")
+
+# important items
+# AP and IB assessment data are reported to the SIRS in Assessment Fact. The count of students who took the exam. The percentage of those AP students reported with a score of 3 or higher which are generally considered passing, while IB assessments reported with a score of 4 or higher are generally considered passing.
+
+
+```
+
+
+
+
 ## Advanced Placement (AP) and International Baccalaureate (IB) course participation and assessment data 
 
 The data appear (??) to be limited to 2018-19 through 2020-21
@@ -196,13 +334,198 @@ Data is reported by education institutions to the State Education Department thr
 # https://data.nysed.gov/files/apib/1819/APIB19.zip
 # does not appear to be available for earlier years
 
-url <- "https://data.nysed.gov/files/apib/2021/APIB21.zip"
+# glossary https://data.nysed.gov/glossary.php?report=apib
+# business rules https://data.nysed.gov/businessrules.php?type=apib
+
+# url <- "https://data.nysed.gov/files/apib/1718/APIB18.zip" # does not exist
+url <- "https://data.nysed.gov/files/apib/1819/APIB19.zip"
 url <- "https://data.nysed.gov/files/apib/1920/APIB20.zip"
+url <- "https://data.nysed.gov/files/apib/2021/APIB21.zip"
+
 fpath <- path(dnysed, "apib", path_file(url))
 download.file(url, fpath, mode="wb")
+
+# important items
+# AP and IB assessment data are reported to the SIRS in Assessment Fact. The count of students who took the exam. The percentage of those AP students reported with a score of 3 or higher which are generally considered passing, while IB assessments reported with a score of 4 or higher are generally considered passing.
 
 
 ```
 
+
+```{r}
+#| label: get-AP-data
+#| eval: false
+#| include: false
+
+# APIB19.accdb
+# 
+
+# fn <- "AP IB Course Counts.csv"
+# # APIB19
+# fpath <- path(dnysed, "apib", path_file(url))
+# 
+# fpath <- path(dnysed, "apib", "APIB19", "APIB19.accdb")
+# 
+# db_path <- r"(C:\Users\donbo\Downloads\bulk\SRC2022\SRC2022_GroupIV.accdb)"
+
+
+fpath <- path(dnysed, "apib", "APIB19", "APIB19.accdb")
+con <- RODBC::odbcConnectAccess2007(fpath)
+RODBC::sqlTables(con) |> 
+  filter(TABLE_TYPE=="TABLE") |> 
+  pull(TABLE_NAME)
+df2019 <- RODBC::sqlFetch(con, "AP IB Course Counts", as.is=TRUE)
+glimpse(df2019)
+close(con)
+
+
+fpath <- path(dnysed, "apib", "APIB20", "AP_IB_Course_Tables_2020.accdb")
+con <- RODBC::odbcConnectAccess2007(fpath)
+RODBC::sqlTables(con) |> 
+  filter(TABLE_TYPE=="TABLE") |> 
+  pull(TABLE_NAME)
+df2020 <- RODBC::sqlFetch(con, "AP_IB_Course_Summary_2020", as.is=TRUE)
+glimpse(df2020)
+close(con)
+
+setdiff_all(names(df2019), names(df2020))
+setdiff(names(df2019), names(df2020)) # "ECON DISADVANTAGED" "SWD"                "ELL"                "APIB IND"   
+setdiff(names(df2020), names(df2019)) # "ECODIS_IND" "SWD_IND"    "ELL_IND"    "APIB_IND"
+
+fpath <- path(dnysed, "apib", "APIB21", "AP_IB_Course_Tables_2021.accdb")
+con <- RODBC::odbcConnectAccess2007(fpath)
+RODBC::sqlTables(con) |> 
+  filter(TABLE_TYPE=="TABLE") |> 
+  pull(TABLE_NAME)
+df2021 <- RODBC::sqlFetch(con, "AP_IB_Course_Summary_2021", as.is=TRUE)
+glimpse(df2021)
+close(con)
+
+setdiff_all(names(df2021), names(df2020)) # "grade_level"
+setdiff(names(df2021), names(df2020)) # "grade_level" 
+setdiff(names(df2020), names(df2021)) # none
+
+df <- bind_rows(
+  df2019 |> rename(ECODIS_IND="ECON DISADVANTAGED",
+                SWD_IND=SWD,
+                ELL_IND=ELL,
+                APIB_IND="APIB IND"
+                ),
+  df2020,
+  df2021)
+glimpse(df)
+
+
+df |> 
+  setNames(str_to_lower(names(.data)))
+
+df1 <- df |> 
+  rename(syear=REPORT_SCHOOL_YEAR,
+         gender=STUDENT_GENDER,
+         ethnicity=ETHNIC_DESC_RC,
+         disadvantaged=ECODIS_IND,
+         swd=SWD_IND,
+         ell=ELL_IND,
+         schoolid=STATE_LOCATION_ID,
+         schname=LOCATION_NAME,
+         distid=STATE_DISTRICT_ID,
+         distname=DISTRICT_NAME,
+         cocode=COUNTY_CODE,
+         coname=COUNTY_DESC,
+         nrcode=NEEDS_RESOURCE_CODE,
+         nrdesc=NEEDS_RESOURCE_DESC,
+         apib=APIB_IND,
+         courseid=COURSE_ID,
+         subject=SUBJECT_AREA,
+         course=COURSE_DESC,
+         grade=grade_level,
+         nstudents=STUDENT_COUNT) |> 
+  mutate(endyear=str_sub(syear, 1, 4) |> as.integer() + 1L) |> 
+  relocate(endyear, .after=syear)
+glimpse(df1)
+
+count(df1, endyear)
+dname <- "Hudson"
+dname <- "Argyle"
+dname <- "Salem"
+dname <- "Hastings"
+dname <- "Bethlehem"
+dname <- "Granville"
+dname <- "Hartford"
+df1 |> 
+  filter(str_detect(distname, coll(dname, ignore_case=TRUE))) |> 
+  select(distid, distname) |> 
+  distinct()
+
+argid <- "640101"
+ccsid <- "641610"
+gvillid <- "640701"
+gwid <- "640801"
+hfallsid <- "641301"
+salemid <- "641501"
+saraid <- "521800"
+schuyid <- "521701"
+locals <- c(argid, ccsid, gvillid, gwid, hfallsid, salemid, saraid, schuyid)
+
+bethid <- "010306"
+ftedid <- "640601"
+hartid <- "641001"
+hohid <- "660404"
+doi <- c(locals, bethid, ftedid, hartid, hohid)
+
+df1 |> 
+  filter(str_sub(distid, 1, 2) == "64") |> 
+  select(distid, distname) |> 
+  distinct()
+
+df1 |> 
+  filter(str_sub(distid, 1, 6) %in% doi) |> 
+  summarise(nstudents=sum(nstudents), .by=c(endyear, distid, distname)) |> 
+  pivot_wider(names_from = endyear, values_from = nstudents) |> 
+  mutate(pch1921=`2021` / `2019` - 1,
+         pch2021=`2021` / `2020` - 1) |> 
+  arrange(pch1921)
+
+
+df1 |> 
+  filter(str_sub(distid, 1, 6) %in% doi) |> 
+  summarise(ncourses=length(unique(courseid)), .by=c(endyear, distid, distname)) |> 
+  pivot_wider(names_from = endyear, values_from = ncourses) |> 
+  mutate(ch1921=`2021` - `2019`,
+         ch2021=`2021` - `2020`) |> 
+  arrange(ch1921)
+
+df1 |> filter(endyear==2021, str_sub(distid, 1, 6) %in% doi) |> 
+  select(distid, distname, courseid, subject, course, nstudents) |> 
+  summarise(n=sum(nstudents), .by=c(distid, distname, courseid, subject, course)) |> 
+  distinct()
+
+
+# questions
+# do pre-2021 data include 11th graders?
+# if not, can I get them from the research files?
+# can i add grade enrollment
+# where do kids who take ap through boces count?
+
+
+
+```
+
+
+## Career pathways
+
+```{r}
+#| label: pathways
+#| eval: false
+#| include: false
+
+# https://www.nysed.gov/sites/default/files/programs/curriculum-instruction/multiplepathwayshandout.pdf
+# https://www.nysed.gov/curriculum-instruction/multiple-pathways-frequently-asked-questions
+# https://www.nysed.gov/curriculum-instruction/multiple-pathways
+
+
+
+
+```
 
 
