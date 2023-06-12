@@ -1,0 +1,4 @@
+- source: project
+  netlify:
+    - id: fc987320-c0a5-48f3-ac47-e6acfa21cdf1
+      url: 'https://boydchen-rural-dataprep.netlify.app'

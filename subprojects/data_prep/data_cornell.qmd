@@ -293,11 +293,11 @@ saveRDS(enroll2, here::here("data", "enrollwide.rds"))
 #| eval: true
 #| include: true
 
-enrollwide <- readRDS(here::here("data", "enrollwide.rds"))
-glimpse(enrollwide)
+enroll <- readRDS(here::here("data", "enrollwide.rds"))
+glimpse(enroll)
 
 options(width = 120) 
-print(skim(enrollwide))
+print(skim(enroll))
 options(width=80) # default
 
 ```
@@ -318,6 +318,11 @@ I convert:
 
 
 ```{r}
+#| label: ela-math
+#| eval: false
+#| include: false
+#| echo: false
+
 
 elamath1 <- vroom(path(dschools, "elamath_all.csv"),
                   col_types = cols(.default = col_character()))
@@ -355,6 +360,20 @@ summary(elamath3)
 
 saveRDS(elamath3, here::here("data", "elamath_wide.rds"))
 
+```
+
+
+```{r}
+#| label: elamath-show
+#| eval: true
+#| include: true
+
+elamath <- readRDS(here::here("data", "elamath_wide.rds"))
+glimpse(elamath)
+
+options(width = 120) 
+print(skim(elamath))
+options(width=80) # default
 
 ```
 

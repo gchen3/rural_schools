@@ -444,6 +444,10 @@ df1 <- df |>
   relocate(endyear, .after=syear)
 glimpse(df1)
 
+saveRDS(df1, here::here("data", "apib.rds"))
+
+
+
 count(df1, endyear)
 dname <- "Hudson"
 dname <- "Argyle"
