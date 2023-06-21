@@ -1,0 +1,218 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# New York State data
+
+This page documents data sources obtained from New York State -- for example, from OpenData.
+
+```{r }
+#| label: setup
+#| eval: true
+#| include: false
+#| echo: false
+
+source(here::here("r", "libraries.r"))
+
+dnys <- r"(E:\data\nys\)"
+
+# 641610 Cambridge
+
+```
+
+## NYS links
+
+-   [School aid enacted budget](https://data.ny.gov/Government-Finance/New-York-State-School-Aid-Beginning-School-Year-19/9pb8-dg53)
+
+<!-- TODO:  -->
+
+<!-- -   graduation rate percentiles -->
+
+```{r}
+#| label: info
+#| eval: false
+#| include: false
+
+# Links:
+
+
+```
+
+## School aid
+
+Two docs are available on the [landing page](https://data.ny.gov/Government-Finance/New-York-State-School-Aid-Beginning-School-Year-19/9pb8-dg53). Excerpts below:
+
+School Aid data reflects State aid funding for each school district. Data is sourced from New York State Education Department School Aid data. Data for each year represents aid estimates on a School Year basis as of the given year's Enacted Budget. Aid categories within each school year may vary depending on the appropriations included in the given year's Enacted Budget. In the FY 2008 Enacted Budget, for example, Foundation Aid was created through the consolidation of approximately 30 categories of aid. The data is reported for the 1996-97 school year through the most recent Enacted Budget (i.e., FY 2023). (NYSDOB_EnactedSchoolAid_Overview.pdf)
+
+![](images/image-954082656.png)
+
+```{r}
+#| label: constants
+#| eval: true
+#| include: false
+
+fn <- "New_York_State_School_Aid__Beginning_School_Year_1996-97.csv"
+
+```
+
+```{r}
+#| label: ONETIME-download
+#| eval: false
+#| include: false
+
+# 
+# https://data.ny.gov/Government-Finance/New-York-State-School-Aid-Beginning-School-Year-19/9pb8-dg53  Landing page
+
+url <- "https://data.ny.gov/api/views/9pb8-dg53/rows.csv?accessType=DOWNLOAD&sorting=true"
+download.file(url, path(dnys, fn), mode="wb")
+
+
+
+```
+
+```{r}
+#| label: ONETIME-readsave
+#| eval: false
+#| include: false
+
+df1 <- vroom(path(dnys, fn), col_types = cols(.default = col_character()))
+skim(df1)
+glimpse(df1)
+
+df2 <- df1 |> 
+  select(event=Event,
+         distcode=2,
+         county=County,
+         distname=District,
+         aidcat=5,
+         aidbyear=6,
+         aidsyear=7,
+         change=Change,
+         pch=9) |> 
+  mutate(across(aidbyear:change, as.numeric),
+         pch=parse_number(pch) / 100)
+glimpse(df2)
+skim(df2)
+count(df2, event) # sfy of enacted budget
+
+# need to fix county names:
+count(df2, county) |> print(n=100)
+# Essec             1
+# Essex          7434
+# n/a              25
+
+df2 |> filter(county=="n/a") # aidcat "Grand Total"
+
+count(df2, aidcat) # 86 aid categories (over time)
+
+df2 |> head() |> 
+  mutate(c2=aidsyear - aidbyear,
+         p2=c2 / aidbyear)
+# change and pch are as expected so drop these variables
+
+df3 <- df2 |> 
+  mutate(sfye=str_sub(event, 1, 4) |> as.integer() + 1L,
+         county=ifelse(county=="Essec", "Essex", county),
+         across(c(distcode, county, distname),
+                ~ ifelse(.x == "n/a", NA_character_, .x))) |> 
+  mutate(county=ifelse(is.na(county), "New York State", county)) |> # I have verified this
+  select(-change, -pch) |> 
+  relocate(sfye)
+  
+glimpse(df3)
+count(df3, sfye, event)
+
+df3 |> filter(sfye==2023, str_detect(distname, "Cambridge"))
+df3 |> filter(str_detect(distname, "Cambridge"),
+              aidcat=="Total Formula-Based Aids")
+
+df4 <- df3 |> select(-event)
+skim(df4)
+df4 |> filter(aidsyear==-840554114)
+
+saveRDS(df4, here::here("data", "schoolaid_enactedbudget.rds"))
+
+
+df4 |> 
+  filter(distcode=="641610",
+         aidcat=="Total Formula-Based Aids") |> 
+  ggplot(aes(sfye, aidsyear)) +
+  geom_line() +
+  geom_point()
+
+df4 |> 
+  filter(distcode=="641610",
+         aidcat=="Total Formula-Based Aids") |> 
+  pivot_longer(cols=c(aidbyear, aidsyear)) |> 
+  ggplot(aes(sfye, value, colour=name)) +
+  geom_line() +
+  geom_point()
+
+df4 |> 
+  filter(distcode=="641610",
+         aidcat=="Total Formula-Based Aids") |> 
+  arrange(sfye) |> 
+  mutate(pch=aidsyear / lag(aidsyear) - 1) |> 
+  ggplot(aes(sfye, pch)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0)
+
+
+# aid categories in 2023 -- 24
+df4 |> 
+  filter(sfye==2023) |> 
+  count(aidcat)
+
+df4 |> 
+  filter(sfye==2023, is.na(distcode))
+
+df4 |> 
+  filter(sfye==2023) |> 
+  mutate(nys=county=="New York State") |> 
+  summarise(aidsyear=sum(aidsyear), .by=c(nys, aidcat)) |> 
+  arrange(desc(aidsyear))
+
+df4 |> 
+  filter(sfye==2023, aidcat != "Total Formula-Based Aids") |> 
+  mutate(nys=county=="New York State") |> 
+  summarise(aidsyear=sum(aidsyear), .by=c(nys)) |> 
+  arrange(desc(aidsyear))
+
+df4 |> 
+  filter(aidcat != "Total Formula-Based Aids") |> 
+  mutate(nys=county=="New York State") |> 
+  summarise(aidsyear=sum(aidsyear), .by=c(sfye, nys)) |> 
+  pivot_wider(names_from=nys, values_from = aidsyear) |> 
+  mutate(diff=`FALSE` - `TRUE`, pdiff=diff / `TRUE`) # investigate 2022 and maybe 2021
+
+df4 |> 
+  filter(sfye==2022, aidcat != "Total Formula-Based Aids") |> 
+  mutate(nys=county=="New York State") |> 
+  summarise(aidsyear=sum(aidsyear), .by=c(nys, aidcat)) |> 
+  arrange(desc(aidsyear)) # something is counted twice ?? Below the Line
+
+df4 |> 
+  filter(sfye==2022, aidcat != "Total Formula-Based Aids",
+         !str_detect(aidcat, "Below the Line")) |> 
+  mutate(nys=county=="New York State") |> 
+  summarise(aidsyear=sum(aidsyear), .by=c(nys)) |> 
+  arrange(desc(aidsyear)) # that explains it
+
+
+tmp <- df4 |> 
+  filter(distcode=="641610") |>
+  summarise(aidsyear=sum(aidsyear), .by=c(sfye, aidcat)) |> 
+  arrange(desc(sfye), desc(aidsyear)) |> 
+  pivot_wider(names_from = aidcat, values_from = aidsyear)
+tmp
+
+
+count(df4, county) |> print(n=100)
+
+
+# parse_number("12%") 
+
+```

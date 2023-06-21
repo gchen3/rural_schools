@@ -1,0 +1,157 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Extend and then combine various data files
+
+
+```{r }
+#| label: setup
+#| eval: true
+#| include: false
+#| echo: false
+
+source(here::here("r", "libraries.r"))
+
+dnys <- r"(E:\data\nys\)"
+dnysed <- r"(E:\data\nysed\)"
+
+cambridge <- "641610"
+
+```
+
+
+## Test scores
+
+Extend Cornell ELA-Math data, which cover years beginning in 2005-2017,
+
+and
+
+NYSED report card data
+
+```{r}
+#| label: elamath-corness
+#| eval: true
+#| include: false
+
+elamath <- readRDS(here::here("data", "elamath_wide.rds"))
+glimpse(elamath)
+skim(elamath)
+count(elamath, subject)
+count(elamath, subject, grade)
+
+elamath |> 
+  filter(year==max(year), distid=="641610", subject=="ELA", grade=="3")
+
+```
+
+```{r}
+#| label: elamath-rptcard
+#| eval: true
+#| include: false
+
+# put the rptcard data for 2021 and 2022 into the same format as the Cornell data so we can combine them
+
+dfela <- readRDS(here::here("data", "ela_src2022.rds"))
+dfmath <- readRDS(here::here("data", "math_src2022.rds"))
+
+glimpse(dfela)
+glimpse(dfmath)
+
+setdiff(names(dfela), names(dfmath))
+setdiff(names(dfmath), names(dfela))
+
+count(dfela, ASSESSMENT_NAME)
+count(dfmath, ASSESSMENT_NAME)
+
+combo1 <- bind_rows(dfela, dfmath) |> 
+  filter(ASSESSMENT_NAME %in% c(paste0("MATH", 3:8), paste0("ELA", 3:8))) |> 
+  mutate(grade=str_sub(ASSESSMENT_NAME, -1, -1) |> as.integer(),
+         subject=case_when(str_sub(ASSESSMENT_NAME, 1, 4)=="MATH" ~ "MATH",
+                           str_sub(ASSESSMENT_NAME, 1, 3)=="ELA" ~ "ELA",
+                           TRUE ~ "ERROR")) |> 
+  select(distid=ENTITY_CD,
+         distname=ENTITY_NAME,
+         year=YEAR,
+         subject,
+         grade,
+         subgroup=SUBGROUP_NAME,
+         numtested=NUM_TESTED,
+         level1=LEVEL1_COUNT,
+         level2=LEVEL2_COUNT,
+         level3=LEVEL3_COUNT,
+         level4=LEVEL4_COUNT,
+         level5=LEVEL5_COUNT,
+         totscore=TOTAL_SCALE_SCORES,
+         avgscore=MEAN_SCORE)
+glimpse(combo1)
+count(combo1, subject)
+
+combo2 <- combo1 |> 
+  mutate(year=as.integer(year) - 1,  # use the school year beginning, not end
+         across(numtested:avgscore, as.numeric),
+         level12=level1 + level2,
+         level34=level3 + level4)
+
+glimpse(combo2)
+count(combo2, year)
+
+cambridge
+
+combo2 |> 
+  filter(str_sub(distid, 1, 6)==cambridge, year==2020, subject=="ELA", grade==3)
+
+elamath |> 
+  filter(year==max(year), distid==cambridge, subject=="ELA", grade==3)
+
+tmp <- combo2 |> 
+  select(distid, distname) |> 
+  mutate(start=str_sub(distid, 1, 6),
+         end=str_sub(distid, 7, -1),
+         len=nchar(distid))
+count(tmp, len)
+
+count(tmp, start, sort = TRUE)
+count(tmp, end, sort = TRUE) |> head()
+
+tmp1 <- tmp |> filter(end=="040000")
+tmp1u <- tmp1 |> distinct() # 265, look like CSDs
+
+tmp2 <- tmp |> filter(end=="060000")
+tmp2u <- tmp2 |> distinct() # 193, also look like CSDs
+
+tmp3 <- tmp |> filter(end=="040001")
+tmp3u <- tmp3 |> distinct() # 189, look like elem schools
+
+tmp0000 <- tmp |> filter(str_sub(end, -4, -1)=="0000") |> distinct() # 779 districts I think plus county records
+# 000001000000 Albany county
+tmpdists <- tmp |> 
+  filter(str_sub(end, -4, -1)=="0000") |> 
+  distinct() |> 
+  filter(str_sub(start, 1, 2) != "00") # 716 dists, we lost 63 recs -- 57 counties, 5 borough counties, nyc
+tmp0000 |> filter(!start %in% tmpdists$start)
+
+combo3 <- combo2 |> 
+  filter(str_sub(distid, -4, -1)=="0000",
+         str_sub(distid, 1, 2) != "00") 
+check <- combo3 |> 
+  select(distid, distname) |> 
+  distinct()
+
+combo4 <- combo3 |> 
+  mutate(distid=str_sub(distid, 1, 6))
+
+
+combo4 |> 
+  filter(year==2020, distid==cambridge, subject=="ELA", grade==3) |> 
+  select(distid, year, subject, grade, subgroup, numtested, totscore, avgscore, level34)
+
+elamath |> 
+  filter(year==2020, distid==cambridge, subject=="ELA", grade==3) |> 
+  select(distid, year, subject, grade, subgroup, numtested, totscore, avgscore, level34)
+
+```
+
+

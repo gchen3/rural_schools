@@ -275,8 +275,6 @@ As of now, we only get school report card data for 2021 and 2022, as the Cornell
 # https://data.nysed.gov/downloads.php landing page
 
 
-
-
 # Report card data selected years ----
 # https://data.nysed.gov/files/essa/21-22/SRC2022.zip
 
@@ -302,6 +300,37 @@ download.file(url, fpath, mode="wb")
 
 ```
 
+
+```{r}
+#| label: ela-math
+#| eval: false
+#| include: false
+
+# E:\data\nysed\rptcard\SRC2022
+# Tables: Annual EM ELA Annual EM MATH
+
+fpath <- path(dnysed, "rptcard", "SRC2022", "SRC2022_GroupIV.accdb")
+con <- RODBC::odbcConnectAccess2007(fpath)
+RODBC::sqlTables(con) |> 
+  filter(TABLE_TYPE=="TABLE") |> 
+  pull(TABLE_NAME)
+dfela <- RODBC::sqlFetch(con, "Annual EM ELA", as.is=TRUE)
+dfmath <- RODBC::sqlFetch(con, "Annual EM MATH", as.is=TRUE)
+glimpse(dfela)
+glimpse(dfmath)
+close(con)
+
+setdiff(names(dfela), names(dfmath))
+setdiff(names(dfmath), names(dfela))
+
+count(dfela, ASSESSMENT_NAME)
+count(dfmath, ASSESSMENT_NAME)
+
+saveRDS(dfela, here::here("data", "ela_src2022.rds"))
+saveRDS(dfmath, here::here("data", "math_src2022.rds"))
+
+
+```
 
 
 
