@@ -1,0 +1,25 @@
+---
+title: "OSC Data download"
+author: "Gang Chen"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+## Data source
+
+ <https://wwe1.osc.state.ny.us/localgov/findata/financial-data-for-local-governments.cfm>.
+
+"Detailed Account-Level Data"
+"Revenue, Expenditure and Balance Sheet Data"
+"Single Class of Government for All Years"
+
+Download to folder "C:\Gang Chen\data\schooldistrict_all_years"
+
+1995 to 2023
+
+Downloaded July 5 2024
+updated Sept 19 2024
+
+updated folder "...\osc_data"
+
