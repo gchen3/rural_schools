@@ -18,7 +18,7 @@ library(haven)
 library(labelled)
 
 # locations ---------------------------------------------------------------
-dnces <- r"(E:\data\nces\)"
+dnces <- r"(E:\Gang Chen\data\nces\)"
 
 
 # get geocode data --------------------------------------------------------
@@ -55,7 +55,8 @@ df3 <- df2 |>
   mutate(localef=factor(locale, levels=labs$value, labels=labs$vlab)) |> 
   relocate(localef, .after=locale)
 glimpse(df3)
-count(df3, locale, localef)localecount(df3, locale, localef)
+count(df3, locale, localef)
+localecount(df3, locale, localef)
 
 saveRDS(df3, here::here("data", "nylocales.rds"))
 
@@ -75,3 +76,4 @@ attributes(df3)
 
 tmp <- df3 |> 
   filter(str_detect(name, coll("Cambridge", ignore_case = TRUE)))
+

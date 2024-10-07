@@ -40,6 +40,10 @@ merged_data <- merged_data |> mutate(across(where(is.character), tolower))
   
 names(merged_data) <- tolower(names(merged_data))
 
+save(merged_data, file = here::here("data", "osc_data.RData"))
+
+load(here::here("data", "osc_data.RData"))
+
 # For retirement benefits
 select_retirement_data <- merged_data |>
   filter(level_2_category == "retirement - state/local" |

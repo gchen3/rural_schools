@@ -4,9 +4,9 @@
 source(here::here("r", "libraries.r"))
 
 # locations ---------------------------------------------------------------
-dpad <- r"(E:\data\cornell_pad\)"
+dpad <- r"(E:\Gang Chen\data\cornell_pad\)"
 dschools <- path(dpad, "schools")
-dnysed <- r"(E:\data\nysed\)"
+dnysed <- r"(E:\Gang Chen\data\nysed\)"
 
 # get locale (rural) markings ----------------------------------------------------------------
 xwalk <- readRDS(here::here("data", "sedcodes_xwalk_nodups.rds")) # beds codes and nces codes

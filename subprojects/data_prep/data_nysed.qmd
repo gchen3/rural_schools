@@ -16,7 +16,7 @@ This page documents data sources obtained from the New York State Education Depa
 #| echo: false
 
 source(here::here("r", "libraries.r"))
-dnysed <- r"(E:\data\nysed\)"
+dnysed <- r"(E:\Gang Chen\data\nysed\)"
 
 ```
 

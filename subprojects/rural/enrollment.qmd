@@ -20,9 +20,9 @@ source(here::here("r", "libraries.r"))
 #| warning: false
 #| output: false
 
-dpad <- r"(E:\data\cornell_pad\)"
+dpad <- r"(E:\Gang Chen\data\cornell_pad\)"
 dschools <- path(dpad, "schools")
-dnysed <- r"(E:\data\nyschools\)"
+dnysed <- r"(E:\Gang Chen\data\nyschools\)"
 
 ```
 

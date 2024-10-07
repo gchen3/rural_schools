@@ -21,7 +21,7 @@ I read all data as character to make it easier to look for bad data before conve
 #| echo: false
 
 source(here::here("r", "libraries.r"))
-dpad <- r"(E:\data\cornell_pad\)"
+dpad <- r"(E:\Gang Chen\data\cornell_pad\)"
 dschools <- path(dpad, "schools")
 
 ```

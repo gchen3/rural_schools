@@ -21,3 +21,5 @@ data/
 .DS_Store
 
 .quarto/
+
+osc_data/
