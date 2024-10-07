@@ -29,7 +29,7 @@
 source(here::here("r", "libraries.r"))
 
 # locations ---------------------------------------------------------------
-dnysed <- r"(E:\data\nysed\)"
+dnysed <- r"(E:\Gang Chen\data\nysed\)"
 
 
 # id crosswalk ------------------------------------------------------------
@@ -53,7 +53,7 @@ ids1 <- vroom(path(dnysed, fn),
              col_types = cols(.default = col_character()),
              # col_names = FALSE,
              locale=locale(encoding="UTF-16LE"),
-             delim="\t", trim_ws = TRUE)
+             delim=",", trim_ws = TRUE)
 names(ids1)
 (vnames <- str_replace_all(names(ids1), " ", "_"))
 # [1] "Institution_ID"            "Legal_Name"                "Popular_Name"              "SED_Code"                 
@@ -180,8 +180,17 @@ url <- "https://data.nysed.gov/files/essa/20-21/SRC2021.zip"
 fpath <- path(dnysed, "rptcard", path_file(url))
 download.file(url, fpath, mode="wb")
 
+url <- "https://data.nysed.gov/files/essa/21-22/SRC2022.zip"
+fpath <- path(dnysed, "rptcard", path_file(url))
+download.file(url, fpath, mode="wb")
+
+url <- "https://data.nysed.gov/files/essa/22-23/SRC2023.zip"
+fpath <- path(dnysed, "rptcard", path_file(url))
+download.file(url, fpath, mode="wb")
 
 # Read all tables in the Microsoft Access database Nwind.mdb
+#install.packages("RODBC")
+library(RODBC)
 library(Hmisc)
 library(mdbr)
 d <- mdb.get('Nwind.mdb')
@@ -191,8 +200,8 @@ for(z in d) print(contents(z))
 mdb.get('Nwind.mdb', tables=TRUE)
 
 
-mdb_path <- paste0(here(), "/data/portal_db/portal_sample.accdb")
-mdb_path <- r"(C:\Users\donbo\Downloads\bulk\SRC2022\SRC2022_GroupIV.laccdb)"
+mdb_path <- paste0(here::here(), "/data/portal_db/portal_sample.accdb")
+mdb_path <- r"(E:\Gang Chen\data\nysed\rptcard\SRC2022\SRC2022_GroupIV.laccdb)"
 mdb.get(mdb_path, tables=TRUE)
 
 
@@ -202,7 +211,7 @@ Orders <- mdb.get('Nwind.mdb', tables='Orders')
 library(odbc)
 library(RODBC)
 
-db_path <- r"(C:\Users\donbo\Downloads\bulk\SRC2022\SRC2022_GroupIV.accdb)"
+db_path <- r"(E:\Gang Chen\data\nysed\rptcard\SRC2022\SRC2022_GroupIV.accdb)"
 con <- RODBC::odbcConnectAccess2007(db_path)
 RODBC::sqlTables(con)
 RODBC::sqlTables(con) |> 
@@ -261,3 +270,4 @@ RODBC::sqlTables(con) |>
   pull(TABLE_NAME)
 
 df <- RODBC::sqlFetch(con, "Annual EM MATH", as.is=TRUE)
+

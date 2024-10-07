@@ -34,9 +34,9 @@
 source(here::here("r", "libraries.r"))
 
 # locations ---------------------------------------------------------------
-dpad <- r"(E:\data\cornell_pad\)"
+dpad <- r"(E:\Gang Chen\data\cornell_pad)"
 dschools <- path(dpad, "schools")
-# dnysed <- r"(E:\data\nyschools\)"
+dnysed <- r"(E:\Gang Chen\data\nyschools\)"
 
 
 # download files ----------------------------------------------------------
@@ -62,16 +62,16 @@ ELAMATH_all.csv,          https://pad.human.cornell.edu/schools/ELAMATH_csv.cfm
 ")
 # note that I put ELAMATH last because it might timeout -- change the timeout option as shown below
 
-tout <- getOption("timeout")
-options(timeout=180)
-#for(fnum in 1:nrow(fnames)){
-for(fnum in 8){
-  fname <- fnames$fname[fnum] |> str_to_lower()
-  url <- fnames$url[fnum]
-  print(fname)
-  download.file(url, path(dschools, fname), mode="wb")
-}
-options(timeout=tout)
+# tout <- getOption("timeout")
+# options(timeout=180)
+# #for(fnum in 1:nrow(fnames)){
+# #for(fnum in 8){
+#   fname <- fnames$fname[fnum] |> str_to_lower()
+#   url <- fnames$url[fnum]
+#   print(fname)
+#   download.file(url, path(dschools, fname), mode="wb")
+# }
+# options(timeout=tout)
 
 
 # constants ---------------------------------------------------------------
@@ -284,7 +284,11 @@ saveRDS(demowide, here::here("data", "demowide.rds"))
 # add enrollment 
 
 # get mappping of colheadings to vnames
-mapfn <- "Masterfiles93-94to19-20_final_consistentformulasnopivot_djb.xlsx"
+
+# Gang: Download Masterfiles93-94to19-20_final_consistentformulasnopivot from 
+# Url: https://www.oms.nysed.gov/faru/Profiles/Masterfiles93-94to19-20_final_consistentformulasnopivot.xlsx
+# Store in 
+mapfn <- "Masterfiles93-94to19-20_final_consistentformulasnopivot.xlsx" ##Rename the first row with djb names in the _djb file
 vmap1 <- read_excel(path(dnysed, mapfn), sheet="vnames", range="a1:bj2")
 vmap <- vmap1 |> 
   pivot_longer(cols=everything(), names_to = "colhead", values_to = "vname") |> 
@@ -295,11 +299,10 @@ vmap <- readRDS(here::here("data", "finsedvmap.rds"))
 
 
 finfn <- "Masterfiles93-94to19-20_final_consistentformulasnopivot.xlsx"
-df <- read_excel(path(dnysed, finfn))
+df <- read_excel(path(dnysed, finfn), sheet="Data")
 df2 <- df |> 
-  select(all_of(vmap$colhead)) |> 
-  setNames(vmap$vname) |> 
-  mutate(syear=str_sub(syear6, 1, 4) |> as.integer(),
+  setNames(vmap$vname) |>
+  mutate(syear=str_sub(syear6, 1, 4) |> as.integer(),  
          syear=syear + 1)
 ns(df2)
 # Total Fringe Benefits. The sum of Teacher Retirement, Health, and Other Fringe Benefits.
