@@ -20,9 +20,6 @@ filepath_sedlocales <- here("data", "sedcodes_locales.rds")
 sed_locales <- readRDS(filepath_sedlocales) 
 
 merge_xwalk <- sed_locales |>
-  left_join(osc_beds, by = c("beds" = "sdcode"))
-
-merge_xwalk <- sed_locales |>
   left_join(osc_beds, by = c("sdcode" = "beds"))
 
 # check the match
@@ -37,3 +34,19 @@ print(matched_names, n = nrow(matched_names)) # Skim check looks ok
 
 merge_xwalk <- merge_xwalk |>
   select(-osc_municipal_name, -name_match)
+
+## Identify location ##
+merge_xwalk <- merge_xwalk |>
+  mutate(locale=as.integer(locale),
+  locgrp=case_when(locale %in% 11:13 ~ "city",
+                        locale %in% 21:23 ~ "suburban",
+                        locale %in% 31:33 ~ "town",
+                        locale %in% 41:43 ~ "rural",
+                        TRUE ~ "error"))
+
+
+saveRDS(merge_xwalk, here("data","merge_xwalk.rds"))
+
+
+##
+        

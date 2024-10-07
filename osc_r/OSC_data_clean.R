@@ -163,35 +163,22 @@ join_data <- select_retirement_data |>
   left_join(select_health_data, by = c("calendar_year", "entity_name", "municipal_code", "county")) |>
   left_join(select_capital_data, by = c("calendar_year", "entity_name", "municipal_code", "county")) |>
   left_join(expenditures, by = c("calendar_year", "entity_name", "municipal_code", "county")) |>
-  left_join(salaries, by = c("calendar_year", "entity_name", "municipal_code", "county"))
-
-
-# Have to match municipal_code with sedcodes_locales or leaid
+  left_join(salaries, by = c("calendar_year", "entity_name", "municipal_code", "county")) |>
+  left_join(merge_xwalk, by = c("municipal_code" = "osc_municipal_code"))    # match municipal_code with sedcodes_locales or leaid
 
 # Generate graphs over time
-join_data_mean <- join_data |>
-  group_by(calendar_year) |>
-  summarize(across(c(retirement_benefits, health_costs,debt_service, capital_costs, expenditures, salaries), ~ mean(.x, na.rm = TRUE), .names="{col}_mean")) 
+join_data <- join_data |>
+  mutate(across(c(retirement_benefits, health_costs, debt_service, capital_costs), ~ . / expenditures, .names = "{.col}_perbudget")) |>
+  mutate(across(c(retirement_benefits, health_costs, debt_service, capital_costs), ~ . / salaries, .names = "{.col}_persalary")) 
 
-  
-join_data_mean_per <- join_data |>
-  mutate(retirement_benefits_per = retirement_benefits / expenditures,
-         health_costs_per = health_costs / expenditures,
-         debt_service_per = debt_service / expenditures,
-         capital_costs_per = capital_costs / expenditures) |>
+join_data_year <- join_data |>
   group_by(calendar_year) |>
-  summarize(across(c(retirement_benefits_per, health_costs_per,debt_service_per, capital_costs_per), ~ mean(.x, na.rm = TRUE), .names="{col}_mean")) 
- 
-join_data_mean_per_salary <- join_data |>
-  mutate(retirement_benefits_per_salary = retirement_benefits / salaries,
-         health_costs_per_salary = health_costs / salaries,
-         debt_service_per_salary = debt_service / salaries,
-         capital_costs_per_salary = capital_costs / salaries) |>
-  group_by(calendar_year) |>
-  summarize(across(c(retirement_benefits_per_salary, health_costs_per_salary,debt_service_per_salary, capital_costs_per_salary),
-                   ~ mean(.x, na.rm = TRUE), .names="{col}_mean")) 
+  summarize(across(c(retirement_benefits, health_costs,debt_service, capital_costs, 
+                     retirement_benefits_perbudget, health_costs_perbudget, debt_service_perbudget, capital_costs_perbudget,
+                     retirement_benefits_persalary, health_costs_persalary, debt_service_persalary, capital_costs_persalary
+                     ), ~ mean(.x, na.rm = TRUE), .names="{col}_mean")) 
 
-time_trends <- ggplot(join_data_mean, aes(x = calendar_year)) +
+time_trends <- ggplot(join_data_year, aes(x = calendar_year)) +
   geom_point(aes(y = retirement_benefits_mean, color = "Retirement Benefits")) +
   geom_line(aes(y = retirement_benefits_mean, color = "Retirement Benefits", group = 1)) +
   geom_point(aes(y = health_costs_mean, color = "Health Costs")) +
@@ -201,38 +188,80 @@ time_trends <- ggplot(join_data_mean, aes(x = calendar_year)) +
   geom_point(aes(y = capital_costs_mean, color = "Capital Costs")) +
   geom_line(aes(y = capital_costs_mean, color = "Capital Costs", group = 4)) +
   ylab("Time Trends of Spending (nominal dollar)") +
-  scale_y_continuous(breaks = (seq(0, 10000000, by = 1000000)), limits = c(0, 10000000), labels = scales::dollar) +
+  scale_y_continuous(breaks = (seq(0, 10000000, by = 1000000)), limit = c(0, 10000000), labels = scales::dollar) +
   theme_minimal()
 
 time_trends
 
-time_trends_per <- ggplot(join_data_mean_per, aes(x = calendar_year)) +
-  geom_point(aes(y = retirement_benefits_per_mean, color = "Retirement Benefits")) +
-  geom_line(aes(y = retirement_benefits_per_mean, color = "Retirement Benefits", group = 1)) +
-  geom_point(aes(y = health_costs_per_mean, color = "Health Costs")) +
-  geom_line(aes(y = health_costs_per_mean, color = "Health Costs", group = 2)) +
-  geom_point(aes(y = debt_service_per_mean, color = "Debt Service")) +
-  geom_line(aes(y = debt_service_per_mean, color = "Debt Service", group = 3)) +
-  geom_point(aes(y = capital_costs_per_mean, color = "Capital Costs")) +
-  geom_line(aes(y = capital_costs_per_mean, color = "Capital Costs", group = 4)) +
+time_trends_perbudget <- ggplot(join_data_year, aes(x = calendar_year)) +
+  geom_point(aes(y = retirement_benefits_perbudget_mean, color = "Retirement Benefits")) +
+  geom_line(aes(y = retirement_benefits_perbudget_mean, color = "Retirement Benefits", group = 1)) +
+  geom_point(aes(y = health_costs_perbudget_mean, color = "Health Costs")) +
+  geom_line(aes(y = health_costs_perbudget_mean, color = "Health Costs", group = 2)) +
+  geom_point(aes(y = debt_service_perbudget_mean, color = "Debt Service")) +
+  geom_line(aes(y = debt_service_perbudget_mean, color = "Debt Service", group = 3)) +
+  geom_point(aes(y = capital_costs_perbudget_mean, color = "Capital Costs")) +
+  geom_line(aes(y = capital_costs_perbudget_mean, color = "Capital Costs", group = 4)) +
   ylab("Time Trends of Spending (% of expenditures)") +
-  scale_y_continuous(breaks = (seq(0, 0.15, by = 0.02)), limits = c(0, 0.15), labels = scales::percent) +
+  scale_y_continuous(breaks = (seq(0, 0.15, by = 0.02)), limit = c(0, 0.15), labels = scales::percent) +
   theme_minimal()
 
-time_trends_per
+time_trends_perbudget
 
-time_trends_per_salary <- ggplot(join_data_mean_per_salary, aes(x = calendar_year)) +
-  geom_point(aes(y = retirement_benefits_per_salary_mean, color = "Retirement Benefits")) +
-  geom_line(aes(y = retirement_benefits_per_salary_mean, color = "Retirement Benefits", group = 1)) +
-  geom_point(aes(y = health_costs_per_salary_mean, color = "Health Costs")) +
-  geom_line(aes(y = health_costs_per_salary_mean, color = "Health Costs", group = 2)) +
-  geom_point(aes(y = debt_service_per_salary_mean, color = "Debt Service")) +
-  geom_line(aes(y = debt_service_per_salary_mean, color = "Debt Service", group = 3)) +
-  geom_point(aes(y = capital_costs_per_salary_mean, color = "Capital Costs")) +
-  geom_line(aes(y = capital_costs_per_salary_mean, color = "Capital Costs", group = 4)) +
+time_trends_persalary <- ggplot(join_data_year, aes(x = calendar_year)) +
+  geom_point(aes(y = retirement_benefits_persalary_mean, color = "Retirement Benefits")) +
+  geom_line(aes(y = retirement_benefits_persalary_mean, color = "Retirement Benefits", group = 1)) +
+  geom_point(aes(y = health_costs_persalary_mean, color = "Health Costs")) +
+  geom_line(aes(y = health_costs_persalary_mean, color = "Health Costs", group = 2)) +
+  geom_point(aes(y = debt_service_persalary_mean, color = "Debt Service")) +
+  geom_line(aes(y = debt_service_persalary_mean, color = "Debt Service", group = 3)) +
+  geom_point(aes(y = capital_costs_persalary_mean, color = "Capital Costs")) +
+  geom_line(aes(y = capital_costs_persalary_mean, color = "Capital Costs", group = 4)) +
   ylab("Time Trends of Spending (% fo salaries)") +
-  scale_y_continuous(breaks = (seq(0, 1, by = 0.1)), limits = c(0, 1), labels = scales::percent) +
+  scale_y_continuous(breaks = (seq(0, 1, by = 0.1)), limit = c(0, 1), labels = scales::percent) +
   theme_minimal()
 
-time_trends_per_salary
+time_trends_persalary   ##Something not right in year 1998
 
+# Graph over time by location type
+
+year_ret_location <- join_data %>%
+  select(starts_with("retirement_benefits"), calendar_year, locgrp) %>%
+  group_by(calendar_year, locgrp) %>%
+  summarize(across(starts_with("retirement_benefits"), ~ mean(.x, na.rm = TRUE), .names = "{.col}_mean"))
+
+year_ret_location_plot <- ggplot(year_ret_location, aes(x = calendar_year)) +
+  geom_point(aes(y = retirement_benefits_perbudget_mean, color = locgrp)) +
+  geom_line(aes(y = retirement_benefits_perbudget_mean, color = locgrp, group = locgrp)) + 
+  labs(y = "Retirement Benefits per Budget (Mean)", color = "Location Group") +
+  theme_minimal()
+
+year_ret_location_plot
+
+# Create a function
+create_year_location_plot <- function(data, variable_prefix) {
+  year_location_summary <- data %>%
+    select(starts_with(variable_prefix), calendar_year, locgrp) %>%
+    group_by(calendar_year, locgrp) %>%
+    summarize(across(starts_with(variable_prefix), ~ mean(.x, na.rm = TRUE), .names = "{.col}_mean"))
+  
+  plot <- ggplot(year_location_summary, aes(x = calendar_year)) +
+    geom_point(aes_string(y = paste0(variable_prefix, "_perbudget_mean"), color = "locgrp")) +
+    geom_line(aes_string(y = paste0(variable_prefix, "_perbudget_mean"), color = "locgrp", group = "locgrp")) +
+    labs(y = paste0("Mean ", variable_prefix, " per Budget"), color = "Location Group") +
+    theme_minimal()
+  
+  return(plot)
+}
+
+year_ret_location_plot <- create_year_location_plot(join_data, "retirement_benefits")
+year_ret_location_plot
+
+year_debt_location_plot <- create_year_location_plot(join_data, "debt_service")
+year_debt_location_plot
+
+year_health_costs_location_plot <- create_year_location_plot(join_data, "health_costs")
+year_health_costs_location_plot
+
+year_capital_costs_location_plot <- create_year_location_plot(join_data, "capital_costs")
+year_capital_costs_location_plot
